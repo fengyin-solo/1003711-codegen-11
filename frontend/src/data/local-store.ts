@@ -40,6 +40,12 @@ export function listRows(key: string): EntryRow[] {
   return allRows()[key] ?? []
 }
 
+// 丢掉内存缓存重新读 localStorage：拿到互斥锁之后先调它，
+// 才能看到其他终端刚刚写入的内容，避免并发时互相覆盖。
+export function reloadFromStorage(): void {
+  cache = null
+}
+
 export function saveRows(key: string, rows: EntryRow[]): void {
   const next = { ...allRows(), [key]: rows }
   cache = next

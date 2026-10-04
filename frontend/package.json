@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "vue-tsc --noEmit"
+    "typecheck": "vue-tsc --noEmit",
+    "test:recon": "esbuild scripts/recon-test.mts --bundle --platform=node --format=esm --outfile=node_modules/.cache/recon-test.mjs --alias:@=./src && node node_modules/.cache/recon-test.mjs"
   },
   "dependencies": {
     "pinia": "^2.1.7",
