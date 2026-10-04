@@ -35,3 +35,30 @@ body { margin: 0; background: #f6f8fb; color: #1f2937; }
 .error-text { color: #b42318; }
 .status-legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 10px; font-size: 12px; color: var(--muted); }
 .legend-item { background: #eef2f7; border-radius: 999px; padding: 2px 10px; }
+
+/* 对账包/核查面板 */
+.reconcile-panel { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin: 14px 0; }
+.reconcile-panel h3 { margin: 0 0 4px; font-size: 15px; }
+.panel-hint { color: var(--muted); font-size: 12px; margin: 0 0 10px; }
+.panel-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.mini-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.mini-card { border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12px; min-width: 86px; }
+.mini-card strong { display: block; font-size: 16px; }
+.mini-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.mini-table th, .mini-table td { border: 1px solid var(--border); padding: 5px 8px; font-size: 12px; text-align: left; }
+.batch-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.batch-item { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12px; }
+.batch-item .batch-id { font-weight: 600; }
+.badge { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 12px; }
+.badge.ok { background: #e7f6ec; color: #177245; }
+.badge.warn { background: #fdf0e6; color: #b5521b; }
+.badge.bad { background: #fdecec; color: #b42318; }
+.badge.info { background: #eaf1fe; color: #1f6feb; }
+.badge.muted { background: #eef2f7; color: var(--muted); }
+.note-text { color: var(--muted); }
+.check-banner { border-radius: 6px; padding: 8px 12px; font-size: 13px; margin: 10px 0; }
+.check-banner.ok { background: #e7f6ec; color: #177245; border: 1px solid #bfe3cc; }
+.check-banner.info { background: #eaf1fe; color: #1f4f9e; border: 1px solid #c4d8f7; }
+.inline-form { display: inline-flex; gap: 6px; align-items: center; }
+.file-input { font-size: 12px; }
+.btn:disabled { opacity: .55; cursor: not-allowed; }

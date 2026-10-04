@@ -73,7 +73,11 @@ export function exportEntries(key: string): { filename: string; content: string 
 
 export function downloadEntries(key: string): void {
   const { filename, content } = exportEntries(key)
-  const blob = new Blob([content], { type: 'text/csv;charset=utf-8' })
+  downloadText(filename, content, 'text/csv;charset=utf-8')
+}
+
+export function downloadText(filename: string, content: string, mime = 'text/plain;charset=utf-8'): void {
+  const blob = new Blob([content], { type: mime })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url

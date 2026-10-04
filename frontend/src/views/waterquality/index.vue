@@ -11,6 +11,40 @@
       </div>
     </header>
 
+    <!-- 地下水对账确认后联动：采样站点井点核查（多终端并发只生效一次） -->
+    <section class="reconcile-panel">
+      <h3>采样站点井点核查</h3>
+      <p class="panel-hint">
+        地下水观测对账批次确认后，可对全部水质报告核查采样站点是否在井点台账内；
+        同一对账批次只核查一次，多个终端同时发起仅第一个终端生效，其余终端复用同一核查结果。
+      </p>
+      <div v-if="checkBanner" :class="['check-banner', checkBanner.kind]">{{ checkBanner.text }}</div>
+      <div class="panel-toolbar">
+        <button
+          class="btn primary"
+          type="button"
+          :disabled="!pending.canCheck || checking"
+          :title="pending.canCheck ? '' : pending.reason"
+          @click="startCheck"
+        >
+          {{ checking ? '核查中…' : pending.canCheck ? `按批次 ${pending.batchId} 发起核查` : '暂无可核查批次' }}
+        </button>
+        <span v-if="!pending.canCheck" class="note-text">{{ pending.reason }}</span>
+      </div>
+      <div v-if="lastSummary" class="mini-grid">
+        <div class="mini-card"><strong>{{ lastSummary.total }}</strong>报告总数</div>
+        <div class="mini-card"><strong>{{ lastSummary.matched }}</strong>井点一致</div>
+        <div class="mini-card"><strong class="error-text">{{ lastSummary.unmatched }}</strong>站点不符</div>
+      </div>
+      <p v-if="lastSummary" class="panel-hint">
+        核查终端：{{ lastSummary.terminal.slice(0, 8) }} · 操作人：{{ lastSummary.checkedBy }}
+        · {{ lastSummary.checkedAt.slice(0, 19).replace('T', ' ') }}
+        <template v-if="lastSummary.unmatchedSites.length">
+          <br />不符站点：{{ lastSummary.unmatchedSites.join('、') }}
+        </template>
+      </p>
+    </section>
+
     <div class="stat-row">
       <article v-for="item in stats" :key="item.label" class="stat-card">
         <span class="stat-label">{{ item.label }}</span>
@@ -71,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import {
   downloadEntries,
@@ -79,19 +113,34 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import {
+  latestCheckEntry,
+  pendingCheck,
+  readCheckSummary,
+  runWaterQualityCheck,
+  subscribeStore,
+  type CheckSummary,
+  type PendingCheck,
+} from '@/api/waterquality-check'
+import { useSessionStore } from '@/stores/session'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('waterquality')
-const columns = ["报告编号", "采样站点", "采样时间", "检测项目", "检测值", "标准上限", "检测人", "报告状态"]
+const columns = ["报告编号", "采样站点", "采样时间", "检测项目", "检测值", "标准上限", "检测人", "报告状态", "核查结果"]
 const actions = ["开始检测", "出具报告", "发起复核"]
 const statuses = ["已采样", "检测中", "已出报告", "超标", "已复核"]
 const stats = [{"label": "本月检测次数", "value": 0}, {"label": "超标报告数", "value": 0}, {"label": "检测中样本", "value": 0}]
+const session = useSessionStore()
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
 const filterFields = columns.slice(0, 3)
+const pending = ref<PendingCheck>({ canCheck: false, batchId: null, reason: '' })
+const checking = ref(false)
+const checkBanner = ref<{ kind: 'ok' | 'info'; text: string } | null>(null)
+const lastSummary = ref<CheckSummary | null>(null)
 const statusSummary = computed(() =>
   statuses.map((status: string) => ({
     status,
@@ -133,5 +182,54 @@ function reload() {
   }
 }
 
-onMounted(reload)
+function refreshCheckState() {
+  pending.value = pendingCheck()
+  const latest = latestCheckEntry()
+  if (latest) {
+    lastSummary.value = readCheckSummary(latest.batchId)
+    if (lastSummary.value && !checkBanner.value) {
+      checkBanner.value = { kind: 'ok', text: `批次 ${latest.batchId} 的井点核查已完成（可能由其它终端执行）` }
+    }
+  }
+  reload()
+}
+
+async function startCheck() {
+  if (!pending.value.canCheck) {
+    checkBanner.value = { kind: 'info', text: pending.value.reason }
+    return
+  }
+  checking.value = true
+  errorMessage.value = ''
+  try {
+    const outcome = await runWaterQualityCheck(session.operator)
+    if (outcome.applied && outcome.summary) {
+      lastSummary.value = outcome.summary
+      checkBanner.value = { kind: 'ok', text: `批次 ${outcome.summary.batchId} 核查完成：本终端生效` }
+    } else {
+      checkBanner.value = {
+        kind: 'info',
+        text: `批次核查已由终端 ${outcome.entry.terminal.slice(0, 8)} 抢先完成，本终端未重复生效，结果已同步`,
+      }
+    }
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '核查发起失败'
+  } finally {
+    checking.value = false
+    refreshCheckState()
+  }
+}
+
+let unsubscribe: (() => void) | null = null
+onMounted(() => {
+  refreshCheckState()
+  unsubscribe = subscribeStore((key) => {
+    if (key.includes('reconcile') || key.includes('once-ledger') || key.includes('entries')) {
+      refreshCheckState()
+    }
+  })
+})
+onBeforeUnmount(() => {
+  unsubscribe?.()
+})
 </script>
